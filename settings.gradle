@@ -1,0 +1,3 @@
+rootProject.name='HEIFConverter'
+include ':app'
+include ':heifconverter'
