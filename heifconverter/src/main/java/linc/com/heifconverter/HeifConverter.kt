@@ -41,7 +41,7 @@ class HeifConverter(
         return try {
             val out = FileOutputStream(dest)
             val bitmap = HeifReader.decodeFile(pathToHeicFile)
-            bitmap.compress(useFormat(format), quality, out)
+            bitmap?.compress(useFormat(format), quality, out)
             out.flush()
             out.close()
             bitmap

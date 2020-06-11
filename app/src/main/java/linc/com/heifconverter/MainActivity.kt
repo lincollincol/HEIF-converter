@@ -12,7 +12,7 @@ class MainActivity : AppCompatActivity() {
         val hc = HeifConverter(this)
 
         hc.convertHeicTo(
-            HeifConverter.JPEG,
+            HeifConverter.PNG,
             "/storage/9016-4EF8/sample1.heic"
         )
 
