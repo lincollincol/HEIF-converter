@@ -9,12 +9,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val hc = HeifConverter(this)
+//        val hc = HeifConverter(this)
 
-        hc.convertHeicTo(
-            HeifConverter.PNG,
-            "/storage/9016-4EF8/sample1.heic"
-        )
+        HeifConverter.withContext(this)
+
+
+//        hc.convertHeicTo(
+//            HeifConverter.PNG,
+//            "/storage/9016-4EF8/sample1.heic"
+//        )
 
     }
 

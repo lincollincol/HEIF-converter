@@ -118,7 +118,7 @@ internal object HeifReader {
      * @param data byte array of compressed image data.
      * @return The decoded bitmap, or null if the image could not be decoded.
      */
-    private fun decodeByteArray(data: ByteArray): Bitmap? {
+    fun decodeByteArray(data: ByteArray): Bitmap? {
         assertPrecondition()
         return try {
             val bais = ByteArrayInputStream(data)
@@ -241,6 +241,29 @@ internal object HeifReader {
             Log.e(TAG, "decodeStream failure", ex)
             null
         }
+    }
+
+    /**
+     * Decode url into a bitmap.
+     *
+     * @param is The input stream that holds the raw data to be decoded into a bitmap.
+     * @return The decoded bitmap, or null if the image could not be decoded.
+     */
+    fun decodeUrl(heicImageUrl: String) {
+
+        /*try {
+            return HeifReader.decodeStream(new URL(strings[0]).openStream());
+        } catch (IOException ex) {
+            Log.e(TAG, "invalid URL", ex);
+            return null;
+        }
+        //"https://github.com/nokiatech/heif/raw/gh-pages/content/images/" "autumn_1440x960.heic"
+
+        Bitmap result
+        progress.dismiss();
+        showImage(result);*/
+
+
     }
 
     private fun assertPrecondition() {
