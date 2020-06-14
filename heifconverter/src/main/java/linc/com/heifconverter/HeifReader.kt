@@ -34,6 +34,7 @@ import android.renderscript.Type
 import android.util.Log
 import android.util.Size
 import android.view.Surface
+import kotlinx.coroutines.*
 import linc.com.heifconverter.iso14496.part12.*
 import linc.com.heifconverter.iso23008.part12.ImageSpatialExtentsBox
 import org.mp4parser.Box
@@ -41,10 +42,13 @@ import org.mp4parser.IsoFile
 import org.mp4parser.boxes.iso14496.part12.FileTypeBox
 import org.mp4parser.boxes.iso14496.part15.HevcConfigurationBox
 import java.io.*
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.Channels
 import java.util.*
+import kotlin.coroutines.CoroutineContext
 
 /**
  * HEIF(High Efficiency Image Format) reader
@@ -118,7 +122,7 @@ internal object HeifReader {
      * @param data byte array of compressed image data.
      * @return The decoded bitmap, or null if the image could not be decoded.
      */
-    fun decodeByteArray(data: ByteArray): Bitmap? {
+    suspend fun decodeByteArray(data: ByteArray): Bitmap? {
         assertPrecondition()
         return try {
             val bais = ByteArrayInputStream(data)
@@ -156,7 +160,7 @@ internal object HeifReader {
      * @param pathName complete path name for the file to be decoded.
      * @return The decoded bitmap, or null if the image could not be decoded.
      */
-    fun decodeFile(pathName: String?): Bitmap? {
+    suspend fun decodeFile(pathName: String?): Bitmap? {
         assertPrecondition()
         try {
             val file = File(pathName)
@@ -186,7 +190,7 @@ internal object HeifReader {
      * @param id The resource id of the image data.
      * @return The decoded bitmap, or null if the image could not be decoded.
      */
-    fun decodeResource(res: Resources, id: Int): Bitmap? {
+    suspend fun decodeResource(res: Resources, id: Int): Bitmap? {
         assertPrecondition()
         return try {
             val length = res.openRawResourceFd(id).length.toInt()
@@ -208,7 +212,7 @@ internal object HeifReader {
      * @param is The input stream that holds the raw data to be decoded into a bitmap.
      * @return The decoded bitmap, or null if the image could not be decoded.
      */
-    fun decodeStream(`is`: InputStream): Bitmap? {
+    suspend fun decodeStream(`is`: InputStream): Bitmap? {
         assertPrecondition()
         return try {
             // write stream to temporary file
@@ -246,24 +250,16 @@ internal object HeifReader {
     /**
      * Decode url into a bitmap.
      *
-     * @param is The input stream that holds the raw data to be decoded into a bitmap.
+     * @param heicImageUrl The url to heic image data to be decoded into a bitmap.
      * @return The decoded bitmap, or null if the image could not be decoded.
      */
-    fun decodeUrl(heicImageUrl: String) {
-
-        /*try {
-            return HeifReader.decodeStream(new URL(strings[0]).openStream());
-        } catch (IOException ex) {
-            Log.e(TAG, "invalid URL", ex);
-            return null;
-        }
-        //"https://github.com/nokiatech/heif/raw/gh-pages/content/images/" "autumn_1440x960.heic"
-
-        Bitmap result
-        progress.dismiss();
-        showImage(result);*/
-
-
+    suspend fun decodeUrl(heicImageUrl: String): Bitmap? {
+        val url = URL(heicImageUrl)
+        val huc: HttpURLConnection = url.openConnection() as HttpURLConnection
+        val responseCode: Int = huc.responseCode
+        if(HttpURLConnection.HTTP_NOT_FOUND == responseCode)
+            throw FileNotFoundException("Invalid url!")
+        return decodeStream(URL(heicImageUrl).openStream())
     }
 
     private fun assertPrecondition() {
@@ -271,7 +267,7 @@ internal object HeifReader {
     }
 
     @Throws(IOException::class)
-    fun parseHeif(isoFile: IsoFile): ImageInfo {
+    private fun parseHeif(isoFile: IsoFile): ImageInfo {
         // validate brand compatibility ('ftyp' box)
         val ftypBoxes = isoFile.getBoxes(
             FileTypeBox::class.java
@@ -439,7 +435,7 @@ internal object HeifReader {
     }
 
     @Throws(FormatFallbackException::class)
-    private fun renderHevcImageWithFormat(
+    private suspend fun renderHevcImageWithFormat(
         bitstream: ByteBuffer,
         info: ImageInfo,
         imageFormat: Int
@@ -450,28 +446,32 @@ internal object HeifReader {
             imageFormat,
             1
         ).use { reader ->
-            renderHevcImage(bitstream, info, reader.surface)
-            var image: Image? = null
-            return try {
-                image = try {
-                    reader.acquireNextImage()
-                } catch (ex: UnsupportedOperationException) {
-                    throw FormatFallbackException(ex)
+            val bitmapDeferred = CoroutineScope(Dispatchers.Default).async {
+                renderHevcImage(bitstream, info, reader.surface)
+                var image: Image? = null
+
+                return@async try {
+                    image = try {
+                        reader.acquireNextImage()
+                    } catch (ex: UnsupportedOperationException) {
+                        throw FormatFallbackException(ex)
+                    }
+                    when (image.format) {
+                        ImageFormat.YUV_420_888, ImageFormat.YV12 -> convertYuv420ToBitmap(
+                            image
+                        )
+                        ImageFormat.RGB_565 -> convertRgb565ToBitmap(image)
+                        else -> throw RuntimeException("unsupported image format(" + image.format + ")")
+                    }
+                } finally {
+                    image?.close()
                 }
-                when (image.format) {
-                    ImageFormat.YUV_420_888, ImageFormat.YV12 -> convertYuv420ToBitmap(
-                        image
-                    )
-                    ImageFormat.RGB_565 -> convertRgb565ToBitmap(image)
-                    else -> throw RuntimeException("unsupported image format(" + image.format + ")")
-                }
-            } finally {
-                image?.close()
             }
+            return@renderHevcImageWithFormat bitmapDeferred.await()
         }
     }
 
-    private fun renderHevcImage(
+    private suspend fun renderHevcImage(
         bitstream: ByteBuffer,
         info: ImageInfo,
         surface: Surface
@@ -525,7 +525,7 @@ internal object HeifReader {
         )
     }
 
-    private fun convertYuv420ToBitmap(image: Image?): Bitmap {
+    private suspend fun convertYuv420ToBitmap(image: Image?): Bitmap {
         val rs = mRenderScript
         val width = image!!.width
         val height = image.height
@@ -591,7 +591,7 @@ internal object HeifReader {
         return bmp
     }
 
-    private fun convertRgb565ToBitmap(image: Image?): Bitmap {
+    private suspend fun convertRgb565ToBitmap(image: Image?): Bitmap {
         val bmp =
             Bitmap.createBitmap(image!!.width, image.height, Bitmap.Config.RGB_565)
         val planes = image.planes
