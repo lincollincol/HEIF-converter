@@ -3,8 +3,8 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/lincollincol/HEIF-converter)
 ![GitHub](https://img.shields.io/github/license/lincollincol/HEIF-converter)  
 ![GitHub followers](https://img.shields.io/github/followers/lincollincol?style=social)
-![GitHub stars](https://img.shields.io/github/stars/lincollincol/GetMe?style=social)
-![GitHub forks](https://img.shields.io/github/forks/lincollincol/GetMe?style=social)
+![GitHub stars](https://img.shields.io/github/stars/lincollincol/HEIF-converter?style=social)
+![GitHub forks](https://img.shields.io/github/forks/lincollincol/HEIF-converter?style=social)
 
 <p align="center">
   <img src="https://github.com/lincollincol/HEIF-converter/blob/master/img/header.png" width="550" height="250">
