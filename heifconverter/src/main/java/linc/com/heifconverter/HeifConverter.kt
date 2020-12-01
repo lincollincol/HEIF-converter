@@ -1,15 +1,15 @@
 package linc.com.heifconverter
 
-import android.Manifest
 import android.content.Context
-import android.content.res.Resources
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.os.Build
 import android.os.Environment
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat.getExternalFilesDirs
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import linc.com.heifconverter.HeifConverter.Format.JPEG
 import linc.com.heifconverter.HeifConverter.Format.PNG
 import linc.com.heifconverter.HeifConverter.Format.WEBP
@@ -19,8 +19,8 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.file.InvalidPathException
 import java.util.*
+
 
 object HeifConverter{
 
@@ -43,11 +43,6 @@ object HeifConverter{
     fun useContext(context: Context) : HeifConverter {
         this.context = context
         HeifReader.initialize(HeifConverter.context)
-        ActivityCompat.requestPermissions(
-            (context as AppCompatActivity),
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-            123
-        )
         initDefaultValues()
         return this
     }
@@ -104,7 +99,6 @@ object HeifConverter{
             quality < 0 -> 0
             else -> quality
         }
-
         return this
     }
 
@@ -132,15 +126,59 @@ object HeifConverter{
     }
 
     fun convert(block: (result: Map<String, Any?>) -> Unit) {
+        // Android versions below Q
         CoroutineScope(Dispatchers.Main).launch {
             var bitmap: Bitmap? = null
+
+            // Handle Android Q version in every case
             withContext(Dispatchers.IO) {
-                bitmap = when(fromDataType) {
-                    InputDataType.FILE -> HeifReader.decodeFile(pathToHeicFile)
-                    InputDataType.URL -> HeifReader.decodeUrl(url!!)
-                    InputDataType.RESOURCES -> HeifReader.decodeResource(context.resources, resId!!)
-                    InputDataType.INPUT_STREAM -> HeifReader.decodeStream(inputStream!!)
-                    InputDataType.BYTE_ARRAY -> HeifReader.decodeByteArray(byteArray!!)
+                bitmap = when (fromDataType) {
+                    InputDataType.FILE -> {
+                        when(Build.VERSION.SDK_INT) {
+                            Build.VERSION_CODES.Q -> BitmapFactory.decodeFile(pathToHeicFile)
+                            else -> HeifReader.decodeFile(pathToHeicFile)
+                        }
+                    }
+                    InputDataType.URL -> {
+                        when(Build.VERSION.SDK_INT) {
+                            Build.VERSION_CODES.Q -> {
+                                // Download image
+                                val url = URL(url)
+                                val connection = url
+                                    .openConnection() as HttpURLConnection
+                                connection.doInput = true
+                                connection.connect()
+                                val input: InputStream = connection.inputStream
+                                BitmapFactory.decodeStream(input)
+                            }
+                            else -> HeifReader.decodeUrl(url!!)
+                        }
+                    }
+                    InputDataType.RESOURCES -> {
+                        when(Build.VERSION.SDK_INT) {
+                            Build.VERSION_CODES.Q -> BitmapFactory.decodeResource(context.resources, resId!!)
+                            else -> HeifReader.decodeResource(context.resources, resId!!)
+                        }
+                    }
+                    InputDataType.INPUT_STREAM -> {
+                        when(Build.VERSION.SDK_INT) {
+                            Build.VERSION_CODES.Q -> BitmapFactory.decodeStream(inputStream!!)
+                            else -> HeifReader.decodeStream(inputStream!!)
+                        }
+                    }
+                    InputDataType.BYTE_ARRAY -> {
+                        when(Build.VERSION.SDK_INT) {
+                            Build.VERSION_CODES.Q -> BitmapFactory.decodeByteArray(
+                                byteArray!!,
+                                0,
+                                byteArray!!.size,
+                                BitmapFactory.Options().apply {
+                                    inJustDecodeBounds = true
+                                }
+                            )
+                            else -> HeifReader.decodeByteArray(byteArray!!)
+                        }
+                    }
                     else -> throw IllegalStateException("You forget to pass input type: File, Url etc. Use such functions: fromFile(. . .) etc.")
                 }
             }
@@ -159,7 +197,8 @@ object HeifConverter{
                     withContext(Dispatchers.Main) {
                         block(mapOf(
                             Key.BITMAP to bitmap,
-                            Key.IMAGE_PATH to (dest?.path ?: "You set saveResultImage(false). If you want to save file - pass true")))
+                            Key.IMAGE_PATH to (dest?.path ?: "You set saveResultImage(false). If you want to save file - pass true"))
+                        )
                     }
                 } catch (e : Exception) {
                     e.printStackTrace()
@@ -198,4 +237,5 @@ object HeifConverter{
         FILE, URL, RESOURCES, INPUT_STREAM,
         BYTE_ARRAY, NONE
     }
+
 }

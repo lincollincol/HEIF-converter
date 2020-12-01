@@ -1,30 +1,10 @@
-/*
- * Copyright (c) 2020 lincollincol
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
 package linc.com.heifconverter
 
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.ImageFormat
+import android.graphics.PixelFormat
 import android.media.*
 import android.os.SystemClock
 import android.renderscript.Allocation
@@ -110,10 +90,7 @@ internal object HeifReader {
         if (mDecoderName == null) {
             throw RuntimeException("no HEVC decoding support")
         }
-        Log.i(
-            TAG,
-            "HEVC decoder=\"$mDecoderName\" supported-size=$mDecoderSupportedSize"
-        )
+        Log.i(TAG,"HEVC decoder=\"$mDecoderName\" supported-size=$mDecoderSupportedSize")
     }
 
     /**
@@ -132,12 +109,10 @@ internal object HeifReader {
             try {
                 renderHevcImageWithFormat(bitstream, info, ImageFormat.YV12)
             } catch (ex: FormatFallbackException) {
-                Log.w(
-                    TAG,
-                    "rendering YV12 format failure; fallback to RGB565"
-                )
+                Log.w(TAG, "rendering YV12 format failure; fallback to RGB565")
                 try {
                     bitstream.rewind()
+
                     renderHevcImageWithFormat(
                         bitstream,
                         info,
@@ -166,10 +141,7 @@ internal object HeifReader {
             val file = File(pathName)
             val fileSize = file.length()
             if (LIMIT_FILESIZE < fileSize) {
-                Log.e(
-                    TAG,
-                    "file size exceeds limit($LIMIT_FILESIZE)"
-                )
+                Log.e(TAG, "file size exceeds limit($LIMIT_FILESIZE)")
                 return null
             }
             val data = ByteArray(fileSize.toInt())
@@ -219,7 +191,7 @@ internal object HeifReader {
             val beginTime = SystemClock.elapsedRealtimeNanos()
             val heifFile =
                 File.createTempFile("heifreader", "heif", mCacheDir)
-            FileOutputStream(heifFile).use { fos ->
+                FileOutputStream(heifFile).use { fos ->
                 val buf = ByteArray(4096)
                 var totalLength = 0
                 var len: Int
@@ -227,19 +199,13 @@ internal object HeifReader {
                     fos.write(buf, 0, len)
                     totalLength += len
                     if (LIMIT_FILESIZE < totalLength) {
-                        Log.e(
-                            TAG,
-                            "data size exceeds limit($LIMIT_FILESIZE)"
-                        )
+                        Log.e(TAG, "data size exceeds limit($LIMIT_FILESIZE)")
                         return null
                     }
                 }
             }
             val endTime = SystemClock.elapsedRealtimeNanos()
-            Log.i(
-                TAG,
-                "HEIC caching elapsed=" + (endTime - beginTime) / 1000000f + "[msec]"
-            )
+            Log.i(TAG, "HEIC caching elapsed=" + (endTime - beginTime) / 1000000f + "[msec]")
             decodeFile(heifFile.absolutePath)
         } catch (ex: IOException) {
             Log.e(TAG, "decodeStream failure", ex)
@@ -321,10 +287,7 @@ internal object HeifReader {
         )
             ?: throw IOException("ImageSpatialExtentsBox('ispe') not found")
         info.size = Size(ispeBox.displayWidth.toInt(), ispeBox.displayHeight.toInt())
-        Log.i(
-            TAG,
-            "HEIC image size=" + ispeBox.displayWidth + "x" + ispeBox.displayHeight
-        )
+        Log.i(TAG, "HEIC image size=" + ispeBox.displayWidth + "x" + ispeBox.displayHeight)
 
         // get HEVC decoder configuration
         val hvccBox = findBox(
@@ -342,23 +305,21 @@ internal object HeifReader {
             }
         }
         info.paramset = ByteBuffer.wrap(baos.toByteArray())
-        Log.d(
-            TAG, "HEIC HEVC profile=" + hevcConfig.general_profile_idc
+        Log.d(TAG, "HEIC HEVC profile=" + hevcConfig.general_profile_idc
                     + " level=" + hevcConfig.general_level_idc / 30f
                     + " bitDepth=" + (hevcConfig.bitDepthLumaMinus8 + 8)
         )
         if (hevcConfig.lengthSizeMinusOne + 1 != 4) {
-            throw IOException(
-                "unsupported DecoderConfigurationRecord.LengthSizeMinusOne("
+            throw IOException("unsupported DecoderConfigurationRecord.LengthSizeMinusOne("
                         + hevcConfig.lengthSizeMinusOne + ")"
             )
         }
 
         // get bitstream position
-        val ilocBoxes =
-            isoFile.getBoxes(
-                ItemLocationBox::class.java, true
-            )
+        val ilocBoxes = isoFile.getBoxes(
+            ItemLocationBox::class.java,
+            true
+        )
         if (ilocBoxes.isEmpty()) {
             throw IOException("ItemLocationBox('iloc') not found")
         }
@@ -371,10 +332,7 @@ internal object HeifReader {
                 break
             }
         }
-        Log.d(
-            TAG,
-            "HEIC bitstream offset=" + info.offset + " length=" + info.length
-        )
+        Log.d(TAG, "HEIC bitstream offset=" + info.offset + " length=" + info.length)
         return info
     }
 
@@ -457,9 +415,7 @@ internal object HeifReader {
                         throw FormatFallbackException(ex)
                     }
                     when (image.format) {
-                        ImageFormat.YUV_420_888, ImageFormat.YV12 -> convertYuv420ToBitmap(
-                            image
-                        )
+                        ImageFormat.YUV_420_888, ImageFormat.YV12 -> convertYuv420ToBitmap(image)
                         ImageFormat.RGB_565 -> convertRgb565ToBitmap(image)
                         else -> throw RuntimeException("unsupported image format(" + image.format + ")")
                     }
@@ -507,10 +463,7 @@ internal object HeifReader {
                     outputFormat = decoder.outputFormat
                     Log.d(TAG, "HEVC output-format=$outputFormat")
                 } else {
-                    Log.d(
-                        TAG,
-                        "HEVC dequeueOutputBuffer return $outputBufferId"
-                    )
+                    Log.d(TAG,"HEVC dequeueOutputBuffer return $outputBufferId")
                 }
             }
             decoder.flush()
@@ -519,10 +472,7 @@ internal object HeifReader {
             decoder.release()
         }
         val endTime = SystemClock.elapsedRealtimeNanos()
-        Log.i(
-            TAG,
-            "HEVC decoding elapsed=" + (endTime - beginTime) / 1000000f + "[msec]"
-        )
+        Log.i(TAG, "HEVC decoding elapsed=" + (endTime - beginTime) / 1000000f + "[msec]")
     }
 
     private suspend fun convertYuv420ToBitmap(image: Image?): Bitmap {
@@ -535,8 +485,7 @@ internal object HeifReader {
         val chromaSize = chromaWidth * chromaHeight
 
         // prepare input Allocation for RenderScript
-        val inType =
-            Type.Builder(rs, Element.U8(rs)).setX(width)
+        val inType = Type.Builder(rs, Element.U8(rs)).setX(width)
                 .setY(height).setYuvFormat(ImageFormat.YV12)
         val inAlloc =
             Allocation.createTyped(rs, inType.create(), Allocation.USAGE_SCRIPT)
@@ -596,6 +545,7 @@ internal object HeifReader {
             Bitmap.createBitmap(image!!.width, image.height, Bitmap.Config.RGB_565)
         val planes = image.planes
         bmp.copyPixelsFromBuffer(planes[0].buffer)
+
         return bmp
     }
 
