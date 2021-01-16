@@ -29,7 +29,7 @@ allprojects {
 ```
 ``` groovy
 dependencies {
-  implementation 'com.github.lincollincol:HEIF-converter:1.2'
+  implementation 'com.github.lincollincol:HEIF-converter:1.3'
 }
 ```  
 
@@ -46,7 +46,7 @@ dependencies {
 <dependency>
   <groupId>com.github.lincollincol</groupId>
   <artifactId>Repo</artifactId>
-  <version>1.2</version>
+  <version>1.3</version>
 </dependency>
 ```
 
