@@ -1,0 +1,15 @@
+*.iml
+*.aab
+.gradle
+/local.properties
+/secrets.properties
+/API\ Key
+/.idea/caches/build_file_checksums.ser
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/vcs.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild

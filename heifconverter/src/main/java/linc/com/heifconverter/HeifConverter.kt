@@ -20,6 +20,8 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 
 object HeifConverter{
@@ -124,6 +126,15 @@ object HeifConverter{
     fun convert() {
         convert {}
     }
+
+    /**
+     * convert using coroutines to get result synchronously
+     * @return map of [Key] to values
+     */
+    suspend fun convertBlocking(): Map<String, Any?> =
+        suspendCoroutine { cont ->
+            convert { result -> cont.resume(result) }
+        }
 
     fun convert(block: (result: Map<String, Any?>) -> Unit) {
         // Android versions below Q
