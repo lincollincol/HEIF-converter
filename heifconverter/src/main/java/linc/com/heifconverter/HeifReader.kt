@@ -414,10 +414,10 @@ internal object HeifReader {
                     } catch (ex: UnsupportedOperationException) {
                         throw FormatFallbackException(ex)
                     }
-                    when (image.format) {
+                    when (image?.format) {
                         ImageFormat.YUV_420_888, ImageFormat.YV12 -> convertYuv420ToBitmap(image)
                         ImageFormat.RGB_565 -> convertRgb565ToBitmap(image)
-                        else -> throw RuntimeException("unsupported image format(" + image.format + ")")
+                        else -> throw RuntimeException("unsupported image format(" + image?.format + ")")
                     }
                 } finally {
                     image?.close()
