@@ -29,7 +29,7 @@ allprojects {
 ```
 ``` groovy
 dependencies {
-  implementation 'com.github.lincollincol:HEIF-converter:1.3'
+  implementation 'com.github.lincollincol:HEIF-converter:1.5'
 }
 ```  
 
@@ -46,7 +46,7 @@ dependencies {
 <dependency>
   <groupId>com.github.lincollincol</groupId>
   <artifactId>Repo</artifactId>
-  <version>1.3</version>
+  <version>1.5</version>
 </dependency>
 ```
 
@@ -96,7 +96,7 @@ If you want to get result bitmap, you need to get value by libarry key ``` HeifC
 ```
 MIT License
 
-Copyright (c) 2020 lincollincol
+Copyright (c) 2022 lincollincol
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
