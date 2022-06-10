@@ -1,4 +1,4 @@
-package linc.com.heifconverter
+package linc.com.heifconverter.sample
 
 import org.junit.Test
 

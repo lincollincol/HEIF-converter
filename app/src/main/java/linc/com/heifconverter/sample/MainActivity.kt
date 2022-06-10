@@ -1,9 +1,10 @@
-package linc.com.heifconverter
+package linc.com.heifconverter.sample
 
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
+import linc.com.heifconverter.HeifConverter
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,8 +23,6 @@ class MainActivity : AppCompatActivity() {
                     println(it[HeifConverter.Key.IMAGE_PATH] as String)
                     resultImage.setImageBitmap((it[HeifConverter.Key.BITMAP] as Bitmap))
                 }
-
         }
-
     }
 }
