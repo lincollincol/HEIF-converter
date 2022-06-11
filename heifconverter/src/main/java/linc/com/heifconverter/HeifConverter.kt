@@ -231,7 +231,9 @@ class HeifConverter internal constructor(private val context: Context) {
     }
 
     private fun useFormat(format: String) = when(format) {
-        WEBP -> Bitmap.CompressFormat.WEBP
+        WEBP ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Bitmap.CompressFormat.WEBP_LOSSY
+            else @Suppress("DEPRECATION") Bitmap.CompressFormat.WEBP
         PNG -> Bitmap.CompressFormat.PNG
         else -> Bitmap.CompressFormat.JPEG
     }
