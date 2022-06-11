@@ -128,11 +128,86 @@ class HeifConverter internal constructor(private val context: Context) {
      * convert using coroutines to get result synchronously
      * @return map of [Key] to values
      */
-    suspend fun convertBlocking(): Map<String, Any?> =
-        suspendCancellableCoroutine { cont ->
-            val job = convert { result -> cont.resume(result) }
-            cont.invokeOnCancellation { job.cancel() }
+    suspend fun convertBlocking(): Map<String, Any?> {
+        var bitmap: Bitmap? = null
+
+        // Handle Android Q version in every case
+        withContext(Dispatchers.IO) {
+            bitmap = when (fromDataType) {
+                InputDataType.FILE -> {
+                    when {
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeFile(pathToHeicFile)
+                        else -> heifReader.decodeFile(pathToHeicFile)
+                    }
+                }
+                InputDataType.URL -> {
+                    when {
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                            // Download image
+                            val url = URL(url)
+                            val connection = url
+                                .openConnection() as HttpURLConnection
+                            connection.doInput = true
+                            connection.connect()
+                            val input: InputStream = connection.inputStream
+                            BitmapFactory.decodeStream(input)
+                        }
+                        else -> heifReader.decodeUrl(url!!)
+                    }
+                }
+                InputDataType.RESOURCES -> {
+                    when {
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeResource(context.resources, resId!!)
+                        else -> heifReader.decodeResource(context.resources, resId!!)
+                    }
+                }
+                InputDataType.INPUT_STREAM -> {
+                    when {
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeStream(inputStream!!)
+                        else -> heifReader.decodeStream(inputStream!!)
+                    }
+                }
+                InputDataType.BYTE_ARRAY -> {
+                    when {
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeByteArray(
+                            byteArray!!,
+                            0,
+                            byteArray!!.size,
+                            BitmapFactory.Options().apply {
+                                inJustDecodeBounds = true
+                            }
+                        )
+                        else -> heifReader.decodeByteArray(byteArray!!)
+                    }
+                }
+                else -> throw IllegalStateException("You forget to pass input type: File, Url etc. Use such functions: fromFile(. . .) etc.")
+            }
         }
+
+        val directoryToSave = File(pathToSaveDirectory)
+        var dest: File? = File(directoryToSave, "$convertedFileName$outputFormat")
+
+        val result: MutableMap<String, Any?> = mutableMapOf(Key.BITMAP to bitmap)
+        withContext(Dispatchers.IO) {
+            val out = FileOutputStream(dest!!)
+            try {
+                bitmap?.compress(useFormat(outputFormat), outputQuality, out)
+                if (!saveResultImage) {
+                    dest!!.delete()
+                    dest = null
+                }
+                result[Key.IMAGE_PATH] = dest?.path
+                    ?: "You set saveResultImage(false). If you want to save file - pass true"
+            } catch (e : Exception) {
+                e.printStackTrace()
+            } finally {
+                out.flush()
+                out.close()
+            }
+        }
+
+        return result.toMap()
+    }
 
     /**
      * convert asynchronously using [block] to receive the results.
@@ -144,89 +219,9 @@ class HeifConverter internal constructor(private val context: Context) {
     fun convert(
         coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
         block: (result: Map<String, Any?>) -> Unit,
-    ): Job {
-        // Android versions below Q
-        return coroutineScope.launch {
-            var bitmap: Bitmap? = null
-
-            // Handle Android Q version in every case
-            withContext(Dispatchers.IO) {
-                bitmap = when (fromDataType) {
-                    InputDataType.FILE -> {
-                        when {
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeFile(pathToHeicFile)
-                            else -> heifReader.decodeFile(pathToHeicFile)
-                        }
-                    }
-                    InputDataType.URL -> {
-                        when {
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-                                // Download image
-                                val url = URL(url)
-                                val connection = url
-                                    .openConnection() as HttpURLConnection
-                                connection.doInput = true
-                                connection.connect()
-                                val input: InputStream = connection.inputStream
-                                BitmapFactory.decodeStream(input)
-                            }
-                            else -> heifReader.decodeUrl(url!!)
-                        }
-                    }
-                    InputDataType.RESOURCES -> {
-                        when {
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeResource(context.resources, resId!!)
-                            else -> heifReader.decodeResource(context.resources, resId!!)
-                        }
-                    }
-                    InputDataType.INPUT_STREAM -> {
-                        when {
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeStream(inputStream!!)
-                            else -> heifReader.decodeStream(inputStream!!)
-                        }
-                    }
-                    InputDataType.BYTE_ARRAY -> {
-                        when {
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeByteArray(
-                                byteArray!!,
-                                0,
-                                byteArray!!.size,
-                                BitmapFactory.Options().apply {
-                                    inJustDecodeBounds = true
-                                }
-                            )
-                            else -> heifReader.decodeByteArray(byteArray!!)
-                        }
-                    }
-                    else -> throw IllegalStateException("You forget to pass input type: File, Url etc. Use such functions: fromFile(. . .) etc.")
-                }
-            }
-
-            val directoryToSave = File(pathToSaveDirectory)
-            var dest: File? = File(directoryToSave, "$convertedFileName$outputFormat")
-
-            withContext(Dispatchers.IO) {
-                val out = FileOutputStream(dest!!)
-                try {
-                    bitmap?.compress(useFormat(outputFormat), outputQuality, out)
-                    if(!saveResultImage) {
-                        dest!!.delete()
-                        dest = null
-                    }
-                    withContext(Dispatchers.Main) {
-                        block(mapOf(
-                            Key.BITMAP to bitmap,
-                            Key.IMAGE_PATH to (dest?.path ?: "You set saveResultImage(false). If you want to save file - pass true"))
-                        )
-                    }
-                } catch (e : Exception) {
-                    e.printStackTrace()
-                }finally {
-                    out.flush()
-                    out.close()
-                }
-            }
-        }
+    ): Job = coroutineScope.launch {
+        val result = convertBlocking()
+        block(result)
     }
 
     private fun initDefaultValues() {
