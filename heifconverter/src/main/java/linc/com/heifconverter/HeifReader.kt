@@ -35,25 +35,14 @@ import kotlin.coroutines.CoroutineContext
  *
  * Create Bitmap object from HEIF file, byte-array, stream, etc.
  */
-internal object HeifReader {
-    private const val TAG = "HeifReader"
+internal class HeifReader(context: Context) {
 
-    /**
-     * input data size limitation for safety.
-     */
-    private const val LIMIT_FILESIZE = 20 * 1024 * 1024 // 20[MB]
-        .toLong()
     private var mRenderScript: RenderScript? = null
     private var mCacheDir: File? = null
     private var mDecoderName: String? = null
     private var mDecoderSupportedSize: Size? = null
 
-    /**
-     * Initialize HeifReader module.
-     *
-     * @param context Context.
-     */
-    fun initialize(context: Context) {
+    init {
         mRenderScript = RenderScript.create(context)
         mCacheDir = context.cacheDir
 
@@ -556,6 +545,16 @@ internal object HeifReader {
         var length = 0
     }
 
-    private class FormatFallbackException internal constructor(ex: Throwable?) :
-        Exception(ex)
+    private class FormatFallbackException internal constructor(ex: Throwable?) : Exception(ex)
+
+    companion object {
+
+        private const val TAG = "HeifReader"
+
+        /**
+         * input data size limitation for safety.
+         */
+        private const val LIMIT_FILESIZE = 20 * 1024 * 1024 // 20[MB]
+            .toLong()
+    }
 }

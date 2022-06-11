@@ -24,9 +24,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 
-object HeifConverter{
-
-    private lateinit var context: Context
+class HeifConverter internal constructor(private val context: Context) {
 
     private var pathToHeicFile: String? = null
     private var url: String? = null
@@ -42,11 +40,10 @@ object HeifConverter{
 
     private var fromDataType = InputDataType.NONE
 
-    fun useContext(context: Context) : HeifConverter {
-        this.context = context
-        HeifReader.initialize(HeifConverter.context)
+    private val heifReader = HeifReader(context)
+
+    init {
         initDefaultValues()
-        return this
     }
 
     fun fromFile(pathToFile: String) : HeifConverter {
@@ -147,7 +144,7 @@ object HeifConverter{
                     InputDataType.FILE -> {
                         when {
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeFile(pathToHeicFile)
-                            else -> HeifReader.decodeFile(pathToHeicFile)
+                            else -> heifReader.decodeFile(pathToHeicFile)
                         }
                     }
                     InputDataType.URL -> {
@@ -162,19 +159,19 @@ object HeifConverter{
                                 val input: InputStream = connection.inputStream
                                 BitmapFactory.decodeStream(input)
                             }
-                            else -> HeifReader.decodeUrl(url!!)
+                            else -> heifReader.decodeUrl(url!!)
                         }
                     }
                     InputDataType.RESOURCES -> {
                         when {
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeResource(context.resources, resId!!)
-                            else -> HeifReader.decodeResource(context.resources, resId!!)
+                            else -> heifReader.decodeResource(context.resources, resId!!)
                         }
                     }
                     InputDataType.INPUT_STREAM -> {
                         when {
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeStream(inputStream!!)
-                            else -> HeifReader.decodeStream(inputStream!!)
+                            else -> heifReader.decodeStream(inputStream!!)
                         }
                     }
                     InputDataType.BYTE_ARRAY -> {
@@ -187,7 +184,7 @@ object HeifConverter{
                                     inJustDecodeBounds = true
                                 }
                             )
-                            else -> HeifReader.decodeByteArray(byteArray!!)
+                            else -> heifReader.decodeByteArray(byteArray!!)
                         }
                     }
                     else -> throw IllegalStateException("You forget to pass input type: File, Url etc. Use such functions: fromFile(. . .) etc.")
@@ -249,4 +246,8 @@ object HeifConverter{
         BYTE_ARRAY, NONE
     }
 
+    companion object {
+
+        fun useContext(context: Context) = HeifConverter(context)
+    }
 }
