@@ -9,6 +9,9 @@
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/vcs.xml
+.idea/gradle.xml
+.idea/misc.xml
+.idea/deploymentTargetDropDown.xml
 .DS_Store
 /build
 /captures

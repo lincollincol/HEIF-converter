@@ -145,14 +145,14 @@ object HeifConverter{
             withContext(Dispatchers.IO) {
                 bitmap = when (fromDataType) {
                     InputDataType.FILE -> {
-                        when(Build.VERSION.SDK_INT) {
-                            Build.VERSION_CODES.Q, Build.VERSION_CODES.R, 31 -> BitmapFactory.decodeFile(pathToHeicFile)
+                        when {
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeFile(pathToHeicFile)
                             else -> HeifReader.decodeFile(pathToHeicFile)
                         }
                     }
                     InputDataType.URL -> {
-                        when(Build.VERSION.SDK_INT) {
-                            Build.VERSION_CODES.Q, Build.VERSION_CODES.R, 31 -> {
+                        when {
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
                                 // Download image
                                 val url = URL(url)
                                 val connection = url
@@ -166,20 +166,20 @@ object HeifConverter{
                         }
                     }
                     InputDataType.RESOURCES -> {
-                        when(Build.VERSION.SDK_INT) {
-                            Build.VERSION_CODES.Q, Build.VERSION_CODES.R, 31 -> BitmapFactory.decodeResource(context.resources, resId!!)
+                        when {
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeResource(context.resources, resId!!)
                             else -> HeifReader.decodeResource(context.resources, resId!!)
                         }
                     }
                     InputDataType.INPUT_STREAM -> {
-                        when(Build.VERSION.SDK_INT) {
-                            Build.VERSION_CODES.Q, Build.VERSION_CODES.R, 31 -> BitmapFactory.decodeStream(inputStream!!)
+                        when {
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeStream(inputStream!!)
                             else -> HeifReader.decodeStream(inputStream!!)
                         }
                     }
                     InputDataType.BYTE_ARRAY -> {
-                        when(Build.VERSION.SDK_INT) {
-                            Build.VERSION_CODES.Q, Build.VERSION_CODES.R, 31 -> BitmapFactory.decodeByteArray(
+                        when {
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> BitmapFactory.decodeByteArray(
                                 byteArray!!,
                                 0,
                                 byteArray!!.size,
