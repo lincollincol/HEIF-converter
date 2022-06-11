@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Environment
 import androidx.core.content.ContextCompat.getExternalFilesDirs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -198,6 +199,8 @@ class HeifConverter internal constructor(private val context: Context) {
                 }
                 result[Key.IMAGE_PATH] = dest?.path
                     ?: "You set saveResultImage(false). If you want to save file - pass true"
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (e : Exception) {
                 e.printStackTrace()
             } finally {
