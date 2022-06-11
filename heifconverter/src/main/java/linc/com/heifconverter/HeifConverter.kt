@@ -8,7 +8,9 @@ import android.os.Environment
 import androidx.core.content.ContextCompat.getExternalFilesDirs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import linc.com.heifconverter.HeifConverter.Format.JPEG
 import linc.com.heifconverter.HeifConverter.Format.PNG
@@ -21,8 +23,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
-
 
 class HeifConverter internal constructor(private val context: Context) {
 
@@ -129,13 +129,24 @@ class HeifConverter internal constructor(private val context: Context) {
      * @return map of [Key] to values
      */
     suspend fun convertBlocking(): Map<String, Any?> =
-        suspendCoroutine { cont ->
-            convert { result -> cont.resume(result) }
+        suspendCancellableCoroutine { cont ->
+            val job = convert { result -> cont.resume(result) }
+            cont.invokeOnCancellation { job.cancel() }
         }
 
-    fun convert(block: (result: Map<String, Any?>) -> Unit) {
+    /**
+     * convert asynchronously using [block] to receive the results.
+     *
+     * @param[coroutineScope] [CoroutineScope] to launch the coroutine in.
+     * @param[block] lambda for retrieving the result.
+     * @return A reference to the launched coroutine as a [Job], cancel via [Job.cancel].
+     */
+    fun convert(
+        coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+        block: (result: Map<String, Any?>) -> Unit,
+    ): Job {
         // Android versions below Q
-        CoroutineScope(Dispatchers.Main).launch {
+        return coroutineScope.launch {
             var bitmap: Bitmap? = null
 
             // Handle Android Q version in every case
