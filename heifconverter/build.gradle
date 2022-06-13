@@ -42,7 +42,7 @@ dependencies {
 
     // Coroutines
     def coroutines_version = "1.6.2"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version"
 
     // Testing
