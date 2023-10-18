@@ -19,7 +19,10 @@ Converter for High Efficiency Image Format(HEIF) to other image format
 
 ## Download
 ### Gradle
+
+#### build.gradle (project)
 ``` groovy
+
 allprojects {
   repositories {
     ...
@@ -27,6 +30,8 @@ allprojects {
   }
 }
 ```
+
+#### build.gradle (app)
 ``` groovy
 dependencies {
   implementation 'com.github.lincollincol:HEIF-converter:1.6'
